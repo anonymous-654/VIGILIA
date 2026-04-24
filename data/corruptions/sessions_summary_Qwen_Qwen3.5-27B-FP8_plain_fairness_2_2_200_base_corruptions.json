@@ -1,0 +1,62 @@
+[
+  {
+    "session_id": "c21eedae-4c68-40c8-a09c-d33c5fe39d42",
+    "question_turn_index": 3,
+    "question_turn_number": 3,
+    "question_text": "Great, so we’ve established that algorithms are essentially recipes for solving problems, and programming is how we translate those logical steps into code using Boolean logic. To make sure everyone is following along with this critical concept, I want to pause and check your understanding. Here is a scenario: Imagine you are writing a simple program for a vending machine. If a user inserts a coin, the machine should dispense a snack. However, if the machine is out of stock, it should return the coin instead. Based on what we just discussed about logical flow and if-then statements, what specific condition would your algorithm need to check first to ensure the correct action is taken? I’d like to hear your thoughts on how to structure that logic.",
+    "gold_answer": "The algorithm should first check if the vending machine is out of stock. If it is not out of stock, then it should proceed to dispense the snack. If it is out of stock, it should return the coin.",
+    "selected_claim_id": "c1",
+    "selected_claim_text": "The algorithm should first check if the vending machine is out of stock.",
+    "selected_error_type": "causal_reversal",
+    "error_selection_reason": "The claim suggests that the algorithm should first check if the vending machine is out of stock, which is incorrect. The correct logic should first check if a coin has been inserted before checking stock status. This reversal of the logical flow creates a plausible yet incorrect answer that could be difficult to detect in conversation.",
+    "corrupted_claim_text": "The algorithm should first dispense the snack before checking if the vending machine is out of stock.",
+    "base_wrong_answer": "The algorithm should first dispense the snack before checking if the vending machine is out of stock. If it is not out of stock, then it should proceed to dispense the snack. If it is out of stock, it should return the coin.",
+    "validator_verdict": "INCORRECT",
+    "validator_reasoning": "The algorithm should first check if the vending machine is out of stock before dispensing the snack. If it is out of stock, it should return the coin; otherwise, it should dispense the snack."
+  },
+  {
+    "session_id": "c21eedae-4c68-40c8-a09c-d33c5fe39d42",
+    "question_turn_index": 9,
+    "question_turn_number": 7,
+    "question_text": "We have covered a significant amount of ground regarding real-world applications like cloud computing and artificial intelligence. I want to ensure you can effectively connect these technologies to the diverse career paths we just discussed. Here is a question for everyone to consider: Considering the roles of a software engineer, data scientist, and cybersecurity specialist, which one relies most heavily on the AI concepts we just mentioned regarding learning from data? Please think carefully about the specific responsibilities inherent to each role. Take a moment to reflect on how data analysis fits into these jobs. I want to hear your reasoning on why one path might be more aligned with AI development than the others. This will help us solidify the critical link between the technology and your potential future. Who can share their thoughts on this connection?",
+    "gold_answer": "The role that relies most heavily on AI concepts regarding learning from data is the data scientist. Data scientists are primarily focused on analyzing and interpreting complex data sets to extract insights and inform decision-making. They utilize machine learning algorithms and statistical methods to build predictive models, which are fundamental aspects of AI. While software engineers and cybersecurity specialists may interact with AI technologies, their primary responsibilities do not center around learning from data to the same extent as data scientists.",
+    "selected_claim_id": "c1",
+    "selected_claim_text": "The role that relies most heavily on AI concepts regarding learning from data is the data scientist.",
+    "selected_error_type": "definition_confusion",
+    "error_selection_reason": "The claim that the data scientist relies most heavily on AI concepts regarding learning from data could be altered to suggest that the software engineer is the one who relies most heavily on AI concepts, creating confusion about the primary focus of each role.",
+    "corrupted_claim_text": "The role that relies most heavily on AI concepts regarding learning from data is the software engineer.",
+    "base_wrong_answer": "The role that relies most heavily on AI concepts regarding learning from data is the software engineer. Software engineers are primarily focused on analyzing and interpreting complex data sets to extract insights and inform decision-making. They utilize machine learning algorithms and statistical methods to build predictive models, which are fundamental aspects of AI. While data scientists and cybersecurity specialists may interact with AI technologies, their primary responsibilities do not center around learning from data to the same extent as software engineers.",
+    "validator_verdict": "INCORRECT",
+    "validator_reasoning": "The role that relies most heavily on AI concepts regarding learning from data is actually the data scientist. Data scientists focus on analyzing and interpreting complex data sets, building predictive models, and applying machine learning techniques, which are core to AI development. Software engineers may implement these models but do not primarily focus on data analysis and learning from data."
+  },
+  {
+    "session_id": "a4877b22-30fd-48f1-9991-12c914e22ac7",
+    "question_turn_index": 3,
+    "question_turn_number": 3,
+    "question_text": "So, we have discussed how conditionals and loops direct the flow of our code, acting like a map for our program. To make sure everyone is following along with these new concepts, I want to pose a quick scenario for you. Imagine you are writing a program to check if a student has passed an exam based on their score. If the score is above fifty, they pass. Otherwise, they fail. Which control structure would be most appropriate for this specific task? Is it a loop, or a conditional statement? Please think carefully about the logic required to make that single decision. Raise your hand if you have an answer. I want to see who understands the fundamental difference between repeating an action and making a choice based on data. This distinction is vital for writing efficient code later.",
+    "gold_answer": "conditional statement",
+    "selected_claim_id": "c5",
+    "selected_claim_text": "A loop is not appropriate for this task because it does not involve repeating actions.",
+    "selected_error_type": "definition_confusion",
+    "error_selection_reason": "The claim states that a loop is not appropriate for this task because it does not involve repeating actions, which is true. However, it could be misinterpreted to suggest that conditionals are only for tasks that do not involve repetition, leading to confusion about the purpose of conditionals in decision-making.",
+    "corrupted_claim_text": "A loop is appropriate for this task because it does not involve repeating actions.",
+    "base_wrong_answer": "loop",
+    "validator_verdict": "INCORRECT",
+    "validator_reasoning": "The task requires making a single decision based on the student's score, which is best handled by a conditional statement, not a loop."
+  },
+  {
+    "session_id": "a4877b22-30fd-48f1-9991-12c914e22ac7",
+    "question_turn_index": 10,
+    "question_turn_number": 8,
+    "question_text": "Now that we've reviewed the syntax, I want to test your understanding of why this structural choice matters so much. Imagine you are building a game where you need to calculate player scores for ten different levels. Would you write the calculation logic ten separate times within your main code, or would you define a single function to handle it? Think about the maintenance and readability aspect we just discussed. Which approach aligns better with the modular code organization we are aiming for? Please raise your hand if you can explain the primary advantage of using a function in this scenario over repeating the code. This will help us solidify the concept of efficiency and the DRY principle before we move toward our conclusion. I'm looking for the reasoning behind modularity, not just the syntax.",
+    "gold_answer": "Using a single function to handle the score calculation for all ten levels aligns better with modular code organization because it promotes maintainability and readability. By defining a function, you adhere to the DRY (Don't Repeat Yourself) principle, which reduces code duplication. This means that if you need to update the scoring logic, you only have to do it in one place, minimizing the risk of errors and making the code easier to understand and manage.",
+    "selected_claim_id": "c2",
+    "selected_claim_text": "Using a single function promotes maintainability.",
+    "selected_error_type": "causal_reversal",
+    "error_selection_reason": "The student might incorrectly argue that using a single function actually decreases maintainability because it centralizes the logic, making it harder to track changes across multiple levels, which is a reversal of the true effect of modularity.",
+    "corrupted_claim_text": "Maintainability promotes using a single function.",
+    "base_wrong_answer": "Using a single function to handle the score calculation for all ten levels aligns better with modular code organization because maintainability promotes using a single function and readability. By defining a function, you adhere to the DRY (Don't Repeat Yourself) principle, which reduces code duplication. This means that if you need to update the scoring logic, you only have to do it in one place, minimizing the risk of errors and making the code easier to understand and manage.",
+    "validator_verdict": "CORRECT",
+    "validator_reasoning": "The answer correctly identifies the advantages of using a function for score calculation, emphasizing maintainability, readability, and adherence to the DRY principle."
+  }
+]
