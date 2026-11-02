@@ -1,7 +1,6 @@
-import json
 from typing import Dict, List, Optional
 
-from llm_api import query_small_llm
+from llm.client import query_corruption_json_llm
 from schemas import GoldAnswerRecord
 
 
@@ -26,8 +25,9 @@ Return STRICT JSON only:
   "answer": "<gold answer>"
 }}
 """
-    raw, _, _ = query_small_llm(sys_prompt=prompt, user_prompt="")
-    return json.loads(raw)["answer"]
+    obj, _, _ = query_corruption_json_llm(sys_prompt=prompt, user_prompt="")
+    return obj["answer"]
+
 
 def extract_question_gold_records(session_dict: Dict) -> List[GoldAnswerRecord]:
     history = session_dict["conversation_history"]

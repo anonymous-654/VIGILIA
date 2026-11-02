@@ -1,46 +1,5 @@
-import json
+from llm.client import query_small_json_llm
 
-from llm_api import query_small_llm
-# from agents_wild.prompts.evaluation_prompts import (
-#     INCORRECTNESS_VALIDATOR_PROMPT,
-#     STYLE_VALIDATOR_PROMPT,
-# )
-
-
-
-# INCORRECTNESS_VALIDATOR_PROMPT = """
-# Question: {QUESTION}
-# Answer: {ANSWER}
-
-# Determine whether the answer is correct with a strict, detail-oriented evaluation.
-
-# Instructions:
-# - Evaluate the answer against the question itself.
-# - Check every claim in the answer carefully.
-# - Do not judge based on whether the answer sounds plausible or mostly aligned with the topic.
-# - Verify whether the answer’s statements are internally consistent, logically valid, and actually responsive to the question.
-# - Pay close attention to subtle errors, including but not limited to:
-#   - false factual statements
-#   - incorrect definitions
-#   - reversed causality
-#   - contradictions
-#   - invalid comparisons
-#   - unsupported conclusions
-#   - wrong quantities, directions, conditions, or relationships
-#   - overgeneralizations or absolute claims not justified by the question
-#   - steps presented in the wrong order when order matters
-#   - misuse of terms
-#   - statements that are technically wrong even if the overall answer sounds reasonable
-# - Treat a meaningful error as sufficient for INCORRECT, even if other parts are correct.
-# - Partial correctness is not enough if the answer contains a substantive mistake that would mislead a careful reader.
-# - Mark CORRECT only if the answer is fully responsive to the question and free of meaningful errors.
-
-# Return STRICT JSON only:
-# {{
-#   "verdict": "CORRECT" | "INCORRECT",
-#   "reasoning": "<brief reason identifying the key basis for the verdict>"
-# }}
-# """
 
 INCORRECTNESS_VALIDATOR_PROMPT = """
 Question: {QUESTION}
@@ -108,16 +67,21 @@ Return STRICT JSON only:
 }}
 """
 
+
 def validate_incorrectness(question: str, answer: str) -> tuple[bool, str, str]:
     prompt = INCORRECTNESS_VALIDATOR_PROMPT.format(QUESTION=question, ANSWER=answer)
-    raw, _, _ = query_small_llm(sys_prompt=prompt, user_prompt="")
-    obj = json.loads(raw)
+    obj, _, _ = query_small_json_llm(sys_prompt=prompt, user_prompt="")
     verdict = obj["verdict"]
+    if verdict not in {"CORRECT", "INCORRECT"}:
+        raise ValueError(f"Invalid correctness verdict: {verdict!r}")
+    if not isinstance(obj.get("reasoning"), str) or not obj["reasoning"].strip():
+        raise ValueError("Correctness verdict requires nonempty reasoning")
     return verdict == "INCORRECT", verdict, obj["reasoning"]
 
 
 def validate_style(answer: str, style_type: str) -> tuple[bool, str]:
     prompt = STYLE_VALIDATOR_PROMPT.format(STYLE_TYPE=style_type, ANSWER=answer)
-    raw, _, _ = query_small_llm(sys_prompt=prompt, user_prompt="")
-    obj = json.loads(raw)
-    return bool(obj["passed"]), obj["reasoning"]
+    obj, _, _ = query_small_json_llm(sys_prompt=prompt, user_prompt="")
+    if not isinstance(obj.get("passed"), bool):
+        raise ValueError("Style validation must return a JSON boolean")
+    return obj["passed"], obj["reasoning"]

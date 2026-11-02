@@ -1,25 +1,32 @@
 import argparse
+from core.cli import positive_int
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from tqdm import tqdm
 
-from config import CORRUPTION_DIR, DEFAULT_STYLE_TYPES
+from config import DEFAULT_STYLE_TYPES, corruption_model_dir
 from corruption.base_corruptor import generate_base_corruption
 from corruption.claims import extract_claims
 from corruption.gold import extract_question_gold_records
 from corruption.selector import choose_claim_and_error_type
 from corruption.style_corruptor import apply_style_corruption
-from store_utils import load_json, save_json
+from core.checkpoints import prepare_checkpoint
+from core.json_io import load_json, save_json
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--session_path", type=str, required=True)
     parser.add_argument("--model_path", type=str, required=True)
-    parser.add_argument("--session_workers", type=int, default=4)
-    parser.add_argument("--style_workers", type=int, default=4)
+    parser.add_argument("--session_workers", type=positive_int, default=6)
+    parser.add_argument("--style_workers", type=positive_int, default=4)
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Reuse saved sessions and process only missing session IDs.",
+    )
     return parser.parse_args()
 
 
@@ -118,7 +125,9 @@ def process_one_session(
 
     grouped = {
         "session_id": session.get("session_id"),
-        "session_index": session.get("session_index", session.get("metadata", {}).get("session_index")),
+        "session_index": session.get(
+            "session_index", session.get("metadata", {}).get("session_index")
+        ),
         "subject": session.get("subject"),
         "topic": session.get("topic"),
         "num_base_corruptions": len(session_base_records),
@@ -134,10 +143,59 @@ def main():
     args = parse_args()
     data = load_json(Path(args.session_path))
     sessions = normalize_sessions(data)
+    session_ids = [session.get("session_id") for session in sessions]
+    if (
+        not session_ids
+        or any(not sid for sid in session_ids)
+        or len(set(session_ids)) != len(session_ids)
+    ):
+        raise ValueError("Input requires unique, nonempty session IDs")
 
-    all_base_records: List[Dict[str, Any]] = []
-    all_styled_records: List[Dict[str, Any]] = []
+    stem = Path(args.session_path).stem
+    out_dir = corruption_model_dir("main", args.model_path)
+    base_path = out_dir / f"{stem}_base_corruptions.json"
+    styled_path = out_dir / f"{stem}_styled_corruptions.json"
+    grouped_path = out_dir / f"{stem}_grouped_corruptions.json"
+
+    prepare_checkpoint(
+        out_dir / f"{stem}_corruption.inputs.json",
+        Path(args.session_path),
+        {"model": args.model_path, "styles": DEFAULT_STYLE_TYPES},
+        [base_path, styled_path, grouped_path],
+        args.resume,
+    )
+
     grouped_results: List[Dict[str, Any]] = []
+    completed_ids = set()
+    if args.resume:
+        session_ids = [session.get("session_id") for session in sessions]
+        if any(not sid for sid in session_ids) or len(set(session_ids)) != len(
+            session_ids
+        ):
+            raise ValueError("Resume requires unique, nonempty input session IDs")
+        if grouped_path.exists():
+            grouped_results = load_json(grouped_path)
+            if not isinstance(grouped_results, list):
+                raise ValueError("Saved grouped results must be a list")
+            for grouped in grouped_results:
+                sid = grouped.get("session_id")
+                if sid not in session_ids or sid in completed_ids:
+                    raise ValueError(
+                        f"Saved session ID is unknown or duplicated: {sid}"
+                    )
+                for key in ("base_corruptions", "styled_corruptions"):
+                    if not isinstance(grouped.get(key), list):
+                        raise ValueError(f"Saved session {sid} has invalid {key}")
+                completed_ids.add(sid)
+    reused_sessions = len(grouped_results)
+    pending = [
+        (idx, session)
+        for idx, session in enumerate(sessions)
+        if session.get("session_id") not in completed_ids
+    ]
+    print(
+        f"Sessions: total={len(sessions)} reused={reused_sessions} pending={len(pending)}"
+    )
 
     with ThreadPoolExecutor(max_workers=args.session_workers) as executor:
         future_to_session = {
@@ -147,12 +205,12 @@ def main():
                 args.model_path,
                 args.style_workers,
             ): (session_idx, session)
-            for session_idx, session in enumerate(sessions)
+            for session_idx, session in pending
         }
 
         for fut in tqdm(
             as_completed(future_to_session),
-            total=len(sessions),
+            total=len(pending),
             desc="processing sessions",
         ):
             session_idx, session = future_to_session[fut]
@@ -160,8 +218,6 @@ def main():
             try:
                 session_base_records, session_styled_records, grouped = fut.result()
 
-                all_base_records.extend(session_base_records)
-                all_styled_records.extend(session_styled_records)
                 grouped_results.append(grouped)
 
                 print(
@@ -178,15 +234,33 @@ def main():
                     f"error={repr(e)}"
                 )
 
-    stem = Path(args.session_path).stem
+    # The grouped output is authoritative, including sessions reused on resume.
+    all_base_records = [
+        record for group in grouped_results for record in group["base_corruptions"]
+    ]
+    all_styled_records = [
+        record for group in grouped_results for record in group["styled_corruptions"]
+    ]
 
-    save_json(CORRUPTION_DIR / f"{stem}_base_corruptions.json", all_base_records)
-    save_json(CORRUPTION_DIR / f"{stem}_styled_corruptions.json", all_styled_records)
-    save_json(CORRUPTION_DIR / f"{stem}_grouped_corruptions.json", grouped_results)
+    save_json(base_path, all_base_records)
+    save_json(styled_path, all_styled_records)
+    save_json(grouped_path, grouped_results)
 
-    print(f"Saved flat base corruptions to: {CORRUPTION_DIR / f'{stem}_base_corruptions.json'}")
-    print(f"Saved flat styled corruptions to: {CORRUPTION_DIR / f'{stem}_styled_corruptions.json'}")
-    print(f"Saved grouped per-session results to: {CORRUPTION_DIR / f'{stem}_grouped_corruptions.json'}")
+    print(f"Saved flat base corruptions to: {base_path}")
+    print(f"Saved flat styled corruptions to: {styled_path}")
+    print(f"Saved grouped per-session results to: {grouped_path}")
+
+    successful_sessions = len(grouped_results)
+    failed_sessions = len(sessions) - successful_sessions
+    print(
+        f"Session summary: total={len(sessions)} "
+        f"successful={successful_sessions} reused={reused_sessions} "
+        f"newly_successful={successful_sessions - reused_sessions} failed={failed_sessions}",
+        flush=True,
+    )
+
+    if failed_sessions:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

@@ -1,23 +1,16 @@
-#!/bin/bash
-
-#SBATCH --mail-user=cokite@umich.edu
-#SBATCH --mail-type=ALL
-#SBATCH --partition=standard     
-#SBATCH --time=48:10:00
-#SBATCH --mem=8G
-# SBATCH --account=mihalcea_owned1 # cse692w25_class # mihalcea_owned1 # mihalcea98 # chaijy2  # mihalcea98 # mihalcea_owned1
-
-model_path="Qwen/Qwen3.5-27B-FP8"
-session_path="sessions_summary_Qwen_Qwen3.5-27B-FP8_plain_fairness_4_20_200.json"
-
-
-
-#  "anecdote" "emotion", 'none'
-# Load modules
-module load python/3.11.5
-source .venv/bin/activate 
-
-
-python -m corruption.build_main \
-    --model_path ${model_path} \
-    --session_path ${session_path}
+#!/usr/bin/env bash
+set -euo pipefail
+repo_root="${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+while [[ "$repo_root" != / && ! -f "$repo_root/classroom/simulate_class_session.py" ]]; do
+    repo_root="$(dirname "$repo_root")"
+done
+if [[ ! -f "$repo_root/classroom/simulate_class_session.py" ]]; then
+    echo "Cannot locate the repository root" >&2
+    exit 1
+fi
+cd "$repo_root"
+python_bin="${PYTHON:-python3}"
+if [[ -z "${PYTHON:-}" && -x .venv/bin/python ]]; then
+    python_bin=.venv/bin/python
+fi
+exec "$python_bin" -m corruption.build_main "$@"

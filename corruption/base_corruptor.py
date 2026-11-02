@@ -1,7 +1,6 @@
-import json
 from typing import List
 
-from llm_api import query_small_llm
+from llm.client import query_corruption_json_llm
 from corruption.prompts import BASE_CORRUPTION_PROMPT
 from schemas import ClaimUnit, BaseCorruptionRecord
 from corruption.validators import validate_incorrectness
@@ -22,7 +21,9 @@ def generate_base_corruption(
 ) -> BaseCorruptionRecord:
     claim_map = {c.claim_id: c for c in claims}
     selected_claim = claim_map[selected_claim_id]
-    claims_str = "\n".join([f"- {c.claim_id}: {c.claim_text} ({c.claim_role})" for c in claims])
+    claims_str = "\n".join(
+        [f"- {c.claim_id}: {c.claim_text} ({c.claim_role})" for c in claims]
+    )
 
     final_obj = None
     final_verdict = "CORRECT"
@@ -37,12 +38,14 @@ def generate_base_corruption(
             SELECTED_CLAIM_TEXT=selected_claim.claim_text,
             SELECTED_ERROR_TYPE=selected_error_type,
         )
-        # raw, _, _ = query_small_llm(model_path=model_path, sys_prompt=prompt, user_prompt="", temperature=0.4)
-        raw, _, _ = query_small_llm(sys_prompt=prompt, user_prompt="", temperature=0.4)
-        obj = json.loads(raw)
+        obj, _, _ = query_corruption_json_llm(
+            sys_prompt=prompt, user_prompt="", temperature=0.4
+        )
         candidate = obj["base_wrong_answer"].strip()
 
-        is_incorrect, verdict, reasoning = validate_incorrectness(question_text, candidate)
+        is_incorrect, verdict, reasoning = validate_incorrectness(
+            question_text, candidate
+        )
         final_obj = obj
         final_verdict = verdict
         final_reasoning = reasoning

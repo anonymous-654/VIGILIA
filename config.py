@@ -1,32 +1,41 @@
-from pathlib import Path
+"""Shared pipeline paths; output directories are created when a stage writes them."""
+
 import os
+from pathlib import Path
+
 from dotenv import load_dotenv
 
-load_dotenv()
-
-DATA_DIR = Path(os.getenv("AGENTS_WILD_DATA_DIR", "data"))
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-
-RAW_SESSION_DIR = DATA_DIR / "sessions"
+ROOT = Path(__file__).resolve().parent
+load_dotenv(ROOT / ".env")
+DATA_DIR = Path(os.getenv("AGENTS_WILD_DATA_DIR", "data")).expanduser()
+if not DATA_DIR.is_absolute():
+    DATA_DIR = ROOT / DATA_DIR
+SIMULATION_DIR = DATA_DIR / "simulations"
 CORRUPTION_DIR = DATA_DIR / "corruptions"
 EVAL_DIR = DATA_DIR / "evaluations"
-REPLAY_DIR = DATA_DIR / "replayed_sessions"
+DEFAULT_STYLE_TYPES = ["plain", "credibility", "anecdote"]
 
-RAW_SESSION_DIR.mkdir(parents=True, exist_ok=True)
-CORRUPTION_DIR.mkdir(parents=True, exist_ok=True)
-EVAL_DIR.mkdir(parents=True, exist_ok=True)
-REPLAY_DIR.mkdir(parents=True, exist_ok=True)
 
-AZUREOPENAI_ENDPOINT = os.getenv("AZUREOPENAI_ENDPOINT")
-AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
+def safe_model_name(model_path: str) -> str:
+    name = model_path.replace("/", "_")
+    if not name or name in {".", ".."} or "\\" in name:
+        raise ValueError("Model name must identify a model, not a directory")
+    return name
 
-API_VERSION = os.getenv("AZURE_API_VERSION", "2024-12-01-preview")
-LOCAL_BASE_URL = os.getenv("LOCAL_BASE_URL", "http://gl1504.arc-ts.umich.edu:8001/v1")
-LOCAL_API_KEY = os.getenv("LOCAL_API_KEY", "EMPTY")
 
-DEFAULT_SEED = 42
-DEFAULT_MAX_TURNS = 200
-DEFAULT_NUM_SEGMENTS = 5
-DEFAULT_STYLE_TYPES = ["plain", "credibility", "emotion", "anecdote"]
+def model_data_dir(root: Path, model_path: str) -> Path:
+    path = root / safe_model_name(model_path)
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def simulation_model_dir(model_path: str) -> Path:
+    return model_data_dir(SIMULATION_DIR, model_path)
+
+
+def corruption_model_dir(corruption_type: str, model_path: str) -> Path:
+    return model_data_dir(CORRUPTION_DIR / corruption_type, model_path)
+
+
+def evaluation_model_dir(family: str, model_path: str) -> Path:
+    return model_data_dir(EVAL_DIR / family, model_path)
